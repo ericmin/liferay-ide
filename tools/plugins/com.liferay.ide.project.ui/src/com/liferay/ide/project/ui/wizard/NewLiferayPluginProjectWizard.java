@@ -19,14 +19,12 @@ import com.liferay.ide.project.core.IPortletFramework;
 import com.liferay.ide.project.core.ProjectCore;
 import com.liferay.ide.project.core.model.NewLiferayPluginProjectOp;
 import com.liferay.ide.project.core.model.PluginType;
+import com.liferay.ide.project.core.model.ProjectName;
 import com.liferay.ide.project.ui.IvyUtil;
 import com.liferay.ide.project.ui.ProjectUI;
 import com.liferay.ide.sdk.core.ISDKConstants;
 import com.liferay.ide.ui.LiferayPerspectiveFactory;
 import com.liferay.ide.ui.util.UIUtil;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import org.eclipse.ant.internal.ui.model.AntProjectNode;
 import org.eclipse.ant.internal.ui.model.AntProjectNodeProxy;
@@ -48,7 +46,7 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardDialog;
-import org.eclipse.sapphire.modeling.ProgressMonitor;
+import org.eclipse.sapphire.ElementList;
 import org.eclipse.sapphire.ui.def.DefinitionLoader;
 import org.eclipse.sapphire.ui.forms.FormComponentPart;
 import org.eclipse.sapphire.ui.forms.swt.SapphireWizard;
@@ -77,8 +75,6 @@ public class NewLiferayPluginProjectWizard extends SapphireWizard<NewLiferayPlug
     implements IWorkbenchWizard, INewWizard
 {
     private boolean firstErrorMessageRemoved = false;
-
-    private List<IProject> projects = new ArrayList<IProject>();
 
     public NewLiferayPluginProjectWizard()
     {
@@ -155,25 +151,18 @@ public class NewLiferayPluginProjectWizard extends SapphireWizard<NewLiferayPlug
     }
 
     @Override
-    protected org.eclipse.sapphire.modeling.Status performFinish( ProgressMonitor monitor )
-    {
-        final NewLiferayPluginProjectOp op = element().nearest( NewLiferayPluginProjectOp.class );
-
-        projects = op.execute( monitor );
-
-        return org.eclipse.sapphire.modeling.Status.createOkStatus();
-    }
-
-    @Override
     protected void performPostFinish()
     {
         super.performPostFinish();
 
         final NewLiferayPluginProjectOp op = element().nearest( NewLiferayPluginProjectOp.class );
-        //final IProject project = CoreUtil.getProject( op.getFinalProjectName().content() );
 
-        for( final IProject project : projects )
+        ElementList<ProjectName> projectNames = op.getProjectNames();
+
+        for (ProjectName projectName : projectNames)
         {
+            final IProject project = CoreUtil.getProject( projectName.getName().content() );
+
             try
             {
                 addToWorkingSets( project );
@@ -191,7 +180,6 @@ public class NewLiferayPluginProjectWizard extends SapphireWizard<NewLiferayPlug
             {
                 new WorkspaceJob( "Configuring project with Ivy dependencies" ) //$NON-NLS-1$
                 {
-
                     public IStatus runInWorkspace( IProgressMonitor monitor ) throws CoreException
                     {
                         try
@@ -217,15 +205,15 @@ public class NewLiferayPluginProjectWizard extends SapphireWizard<NewLiferayPlug
                 final IPortletFramework portletFramework = op.getPortletFramework().content();
                 String wizardId = null;
 
-                if( ( "mvc" ).equals( portletFramework.getShortName() ) )
+                if( ("mvc").equals( portletFramework.getShortName() ) )
                 {
                     wizardId = "com.liferay.ide.portlet.ui.newPortletWizard";
                 }
-                else if( ( "jsf-2.x" ).equals( portletFramework.getShortName() ) )
+                else if( ("jsf-2.x").equals( portletFramework.getShortName() ) )
                 {
                     wizardId = "com.liferay.ide.portlet.ui.newJSFPortletWizard";
                 }
-                else if( ( "vaadin" ).equals( portletFramework.getShortName() ) )
+                else if( ("vaadin").equals( portletFramework.getShortName() ) )
                 {
                     wizardId = "com.liferay.ide.portlet.vaadin.ui.newVaadinPortletWizard";
                 }

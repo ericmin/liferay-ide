@@ -50,18 +50,16 @@ import com.liferay.ide.project.core.model.internal.UseDefaultLocationListener;
 import com.liferay.ide.project.core.model.internal.UseDefaultLocationValidationService;
 import com.liferay.ide.project.core.model.internal.UseSdkLocationListener;
 
-import java.util.List;
-
-import org.eclipse.core.resources.IProject;
-import org.eclipse.sapphire.Element;
 import org.eclipse.sapphire.ElementList;
 import org.eclipse.sapphire.ElementType;
+import org.eclipse.sapphire.ExecutableElement;
 import org.eclipse.sapphire.ListProperty;
 import org.eclipse.sapphire.PossibleValues;
 import org.eclipse.sapphire.Value;
 import org.eclipse.sapphire.ValueProperty;
 import org.eclipse.sapphire.modeling.Path;
 import org.eclipse.sapphire.modeling.ProgressMonitor;
+import org.eclipse.sapphire.modeling.Status;
 import org.eclipse.sapphire.modeling.annotations.AbsolutePath;
 import org.eclipse.sapphire.modeling.annotations.DefaultValue;
 import org.eclipse.sapphire.modeling.annotations.DelegateImplementation;
@@ -83,7 +81,7 @@ import org.eclipse.sapphire.modeling.annotations.Whitespace;
  * @author Kuo Zhang
  * @author Tao Tao
  */
-public interface NewLiferayPluginProjectOp extends Element, HasLiferayRuntime
+public interface NewLiferayPluginProjectOp extends ExecutableElement, HasLiferayRuntime
 {
     ElementType TYPE = new ElementType( NewLiferayPluginProjectOp.class );
 
@@ -364,7 +362,6 @@ public interface NewLiferayPluginProjectOp extends Element, HasLiferayRuntime
 
     ElementList<NewLiferayProfile> getNewLiferayProfiles();
 
-
     // *** FinalProjectName ***
 
     @DefaultValue( text = "${ProjectName}" )
@@ -383,9 +380,15 @@ public interface NewLiferayPluginProjectOp extends Element, HasLiferayRuntime
     Value<String> getPortletName();
     void setPortletName( String value );
 
+    // *** ProjectNames ***
+
+    @Type( base = ProjectName.class )
+    ListProperty PROP_PROJECT_NAMES = new ListProperty( TYPE, "ProjectNames" );
+
+    ElementList<ProjectName> getProjectNames();
 
     // *** Method: execute ***
 
     @DelegateImplementation( NewLiferayPluginProjectOpMethods.class )
-    List<IProject> execute( ProgressMonitor monitor );
+    Status execute( ProgressMonitor monitor );
 }

@@ -16,6 +16,7 @@ package com.liferay.ide.maven.core;
 
 import com.liferay.ide.core.ILiferayProject;
 import com.liferay.ide.core.util.CoreUtil;
+import com.liferay.ide.layouttpl.core.model.PortletLayoutElement;
 import com.liferay.ide.maven.core.aether.AetherUtil;
 import com.liferay.ide.project.core.IPortletFramework;
 import com.liferay.ide.project.core.NewLiferayProjectProvider;
@@ -25,6 +26,7 @@ import com.liferay.ide.project.core.model.NewLiferayPluginProjectOp;
 import com.liferay.ide.project.core.model.NewLiferayProfile;
 import com.liferay.ide.project.core.model.PluginType;
 import com.liferay.ide.project.core.model.ProfileLocation;
+import com.liferay.ide.project.core.model.ProjectName;
 import com.liferay.ide.project.core.util.SearchFilesVisitor;
 import com.liferay.ide.server.util.ComponentUtil;
 
@@ -86,11 +88,13 @@ import org.eclipse.m2e.core.project.IProjectConfigurationManager;
 import org.eclipse.m2e.core.project.MavenUpdateRequest;
 import org.eclipse.m2e.core.project.ProjectImportConfiguration;
 import org.eclipse.m2e.core.project.ResolverConfiguration;
+import org.eclipse.sapphire.ElementList;
 import org.eclipse.sapphire.platform.PathBridge;
 import org.eclipse.wst.sse.core.StructuredModelManager;
 import org.eclipse.wst.sse.core.internal.provisional.IStructuredModel;
 import org.eclipse.wst.xml.core.internal.document.DocumentTypeImpl;
 import org.eclipse.wst.xml.core.internal.provisional.document.IDOMDocument;
+import org.eclipse.wst.xml.core.internal.provisional.document.IDOMElement;
 import org.eclipse.wst.xml.core.internal.provisional.document.IDOMModel;
 import org.w3c.dom.Document;
 
@@ -128,8 +132,10 @@ public class LiferayMavenProjectProvider extends NewLiferayProjectProvider
         super( new Class<?>[] { IProject.class } );
     }
 
-    public List<IProject> doCreateNewProject( final NewLiferayPluginProjectOp op, IProgressMonitor monitor ) throws CoreException
+    public IStatus doCreateNewProject( final NewLiferayPluginProjectOp op, IProgressMonitor monitor ) throws CoreException
     {
+        IStatus retval = null;
+
         final IMavenConfiguration mavenConfiguration = MavenPlugin.getMavenConfiguration();
         final IMavenProjectRegistry mavenProjectRegistry = MavenPlugin.getMavenProjectRegistry();
         final IProjectConfigurationManager projectConfigurationManager = MavenPlugin.getProjectConfigurationManager();
@@ -139,6 +145,8 @@ public class LiferayMavenProjectProvider extends NewLiferayProjectProvider
         final String version = op.getArtifactVersion().content();
         final String javaPackage = op.getGroupId().content();
         final String activeProfilesValue = op.getActiveProfilesValue().content();
+        final IPortletFramework portletFramework = op.getPortletFramework().content( true );
+        final String frameworkName = getFrameworkName( op );
 
         IPath location = PathBridge.create( op.getLocation().content() );
 
@@ -202,12 +210,26 @@ public class LiferayMavenProjectProvider extends NewLiferayProjectProvider
             projectConfigurationManager.createArchetypeProjects(
                 location, archetype, groupId, artifactId, version, javaPackage, properties, configuration, monitor );
 
+        final ElementList<ProjectName> projects = op.getProjectNames();
+
         if( !CoreUtil.isNullOrEmpty( newProjects ) )
+        {
+            for (IProject project : newProjects)
+            {
+                projects.insert().setName( project.getName() );
+            }
+        }
+
+        if( CoreUtil.isNullOrEmpty( newProjects ) )
+        {
+            retval = LiferayMavenCore.createErrorStatus( "New project was not created due to unknown error" );
+        }
+        else
         {
             final IProject firstProject = newProjects.get( 0 );
 
             // add new profiles if it was specified to add to project or parent poms
-            if( !CoreUtil.isNullOrEmpty( activeProfilesValue ) )
+            if( ! CoreUtil.isNullOrEmpty( activeProfilesValue ) )
             {
                 final String[] activeProfiles = activeProfilesValue.split( "," );
 
@@ -251,7 +273,7 @@ public class LiferayMavenProjectProvider extends NewLiferayProjectProvider
                         Transformer transformer = transformerFactory.newTransformer();
                         DOMSource source = new DOMSource( pomDocument );
                         StreamResult result = new StreamResult( settingsXmlFile );
-                        transformer.transform( source, result );
+                        transformer.transform(source, result);
                     }
                     catch( Exception e )
                     {
@@ -298,8 +320,8 @@ public class LiferayMavenProjectProvider extends NewLiferayProjectProvider
                 {
                     try
                     {
-                        projectConfigurationManager.updateProjectConfiguration( new MavenUpdateRequest(
-                            project, mavenConfiguration.isOffline(), true ), monitor );
+                        projectConfigurationManager.updateProjectConfiguration(
+                            new MavenUpdateRequest( project, mavenConfiguration.isOffline(), true ), monitor );
                     }
                     catch( Exception e )
                     {
@@ -313,9 +335,20 @@ public class LiferayMavenProjectProvider extends NewLiferayProjectProvider
                 final String archVersion = MavenUtil.getMajorMinorVersionOnly( archetypeVersion );
                 updateDtdVersion( firstProject, pluginVersion, archVersion );
             }
+
+            if( op.getPluginType().content().equals( PluginType.portlet ) )
+            {
+                final String portletName = op.getPortletName().content( false );
+                retval = portletFramework.postProjectCreated( firstProject, frameworkName, portletName, monitor );
+            }
         }
 
-        return newProjects;
+        if( retval == null )
+        {
+            retval = Status.OK_STATUS;
+        }
+
+        return retval;
     }
 
     private File getBackupFile( final File file )

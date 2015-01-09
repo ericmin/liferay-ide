@@ -29,9 +29,7 @@ import com.liferay.ide.server.util.ServerUtil;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
@@ -50,6 +48,7 @@ import org.eclipse.wst.server.core.IRuntime;
 import org.osgi.framework.Version;
 import org.osgi.service.prefs.BackingStoreException;
 
+
 /**
  * @author Gregory Amerson
  * @author Simon Jiang
@@ -63,9 +62,8 @@ public class PluginsSDKProjectProvider extends NewLiferayProjectProvider
         super( new Class<?>[] { IProject.class, IRuntime.class } );
     }
 
-    public List<IProject> doCreateNewProject( NewLiferayPluginProjectOp op, IProgressMonitor monitor ) throws CoreException
+    public IStatus doCreateNewProject( NewLiferayPluginProjectOp op, IProgressMonitor monitor ) throws CoreException
     {
-        final List<IProject> projects = new ArrayList<IProject>();
         final String sdkName = op.getPluginsSDKName().content( true );
         final PluginType pluginType = op.getPluginType().content( true );
         final String originalProjectName = op.getProjectName().content();
@@ -190,11 +188,6 @@ public class PluginsSDKProjectProvider extends NewLiferayProjectProvider
         final IProject newProject =
             ProjectUtil.importProject( projectRecord, ServerUtil.getFacetRuntime( runtime ), sdkLocation, op, monitor );
 
-        if ( newProject != null)
-        {
-            projects.add( newProject );
-        }
-
         newProject.open( monitor );
 
         if( baseDir != null )
@@ -237,7 +230,7 @@ public class PluginsSDKProjectProvider extends NewLiferayProjectProvider
                 break;
         }
 
-        return projects;
+        return Status.OK_STATUS;
     }
 
 
